@@ -33,6 +33,8 @@ Item {
   property real shakeOffset: 0
   readonly property bool showPasswordCursor: inputEnabled && !authenticatingPassword && failureMessage.length === 0
   property bool syncingPasswordText: false
+  property bool passwordRevealed: false
+  property bool submitting: false
   property string userName: ""
   readonly property bool video: Util.isVideoPath(root.backgroundPath)
   property string videoPosterPath: ""
@@ -42,6 +44,15 @@ Item {
   signal passwordTextEdited(string password)
   signal submitPassword(string password)
   signal wakeRequested
+
+  function updatePasswordReveal() {
+    if (passwordInput.length > 0 || authenticatingPassword || failureMessage.length > 0 || submitting) {
+      collapseTimer.stop()
+      passwordRevealed = true
+    } else if (passwordRevealed && !collapseTimer.running) {
+      collapseTimer.start()
+    }
+  }
 
   function clearPassword() {
     passwordTextEdited("")
@@ -82,6 +93,7 @@ Item {
 
   Component.onCompleted: {
     syncPasswordText()
+    updatePasswordReveal()
     if (inputEnabled)
       Qt.callLater(forcePasswordFocus)
   }
@@ -95,6 +107,8 @@ Item {
   // when the keyboard returns, so typing went nowhere until the field was clicked.
   Window.onActiveFocusItemChanged: Qt.callLater(restorePasswordFocus)
   onFailureMessageChanged: {
+    if (failureMessage.length > 0) submitting = false
+    updatePasswordReveal()
     if (!failureMessage.length)
       return
     errorHighlight = true
@@ -102,6 +116,11 @@ Item {
     shakeAnimation.restart()
   }
   onInputEnabledChanged: {
+    updatePasswordReveal()
+    if (!inputEnabled) {
+      submitting = false
+      peachBloom.stop()
+    }
     if (inputEnabled)
       Qt.callLater(forcePasswordFocus)
   }
@@ -112,9 +131,21 @@ Item {
     else {
       entryAnimation.stop()
       entryProgress = 0
+      collapseTimer.stop()
+      passwordRevealed = false
+      submitting = false
+      peachBloom.stop()
     }
   }
-  onPasswordTextChanged: syncPasswordText()
+  onPasswordTextChanged: {
+    syncPasswordText()
+    updatePasswordReveal()
+  }
+  onSubmittingChanged: updatePasswordReveal()
+  onAuthenticatingPasswordChanged: {
+    if (authenticatingPassword) submitting = false
+    updatePasswordReveal()
+  }
   onWakeRequested: root.now = new Date()
 
   Ethereal {
@@ -140,6 +171,16 @@ Item {
     running: root.loadBackground
 
     onTriggered: root.now = new Date()
+  }
+  Timer {
+    id: collapseTimer
+    interval: design.collapseDelay
+    onTriggered: {
+      if (passwordInput.length === 0 && !root.authenticatingPassword && !root.failureMessage.length && !root.submitting) {
+        peachBloom.stop()
+        root.passwordRevealed = false
+      }
+    }
   }
   Timer {
     id: errorHold
@@ -251,7 +292,7 @@ Item {
       border.color: Qt.alpha(design.peach, design.cardBorderOpacity)
       border.width: design.cardBorderWidth
       color: Qt.alpha(design.background, design.cardOpacity)
-      height: Math.max(root.compact ? 0 : 350, content.height + root.padding * 2)
+      height: Math.max(root.compact ? 0 : 350 - passwordArea.implicitHeight + passwordArea.height, content.height + root.padding * 2)
       objectName: "glassCard"
       opacity: root.entryProgress
       radius: design.cardRadius
@@ -336,132 +377,168 @@ Item {
           width: 1
         }
         Item {
-          id: inputField
+          id: passwordArea
+          readonly property real bloomInset: Math.max(0, (design.rippleFinalDiameter - inputField.height) / 2)
+          width: parent.width
+          implicitHeight: passwordContent.height + bloomInset
+          // Collapse only the painted area; the original input keeps focus.
+          height: root.passwordRevealed ? implicitHeight : 0
+          opacity: root.passwordRevealed ? 1 : 0
+          clip: true
 
-          anchors.horizontalCenter: parent.horizontalCenter
-          height: 30
-          width: Math.min(parent.width, design.passwordFieldWidth)
+          Behavior on height {
+            NumberAnimation { duration: Style.duration(design.revealDuration); easing.type: Easing.OutCubic }
+          }
+          Behavior on opacity {
+            NumberAnimation { duration: Style.duration(design.revealDuration); easing.type: Easing.OutCubic }
+          }
 
-          TextInput {
-            id: passwordInput
+          Column {
+            id: passwordContent
+            width: parent.width
+            y: passwordArea.bloomInset
+            Item {
+              id: inputField
 
-            Accessible.name: "Password"
-            activeFocusOnPress: true
-            activeFocusOnTab: true
-            anchors.fill: parent
-            anchors.leftMargin: root.fingerprintReserve
-            // Reserve the fingerprint icon's width on both sides so the centered
-            // dots stay symmetric and never slide under the icon as they grow.
-            anchors.rightMargin: root.fingerprintReserve
-            clip: true
-            color: design.peach
-            cursorVisible: activeFocus && root.showPasswordCursor && text.length > 0
-            echoMode: TextInput.Password
-            enabled: root.inputEnabled && !root.authenticatingPassword
-            horizontalAlignment: TextInput.AlignHCenter
-            objectName: "passwordInput"
-            passwordCharacter: "\u25CF"
-            passwordMaskDelay: 0
-            readOnly: root.authenticatingPassword
-            selectedTextColor: design.peach
-            selectionColor: Qt.alpha(design.peach, 0.25)
-            verticalAlignment: TextInput.AlignVCenter
+              anchors.horizontalCenter: parent.horizontalCenter
+              height: 30
+              width: Math.min(parent.width, design.passwordFieldWidth)
 
-            cursorDelegate: Rectangle {
-              color: design.peach
-              visible: passwordInput.cursorVisible
-              width: 2
-            }
-
-            Keys.onPressed: function (event) {
-              root.wakeRequested()
-              if (event.isAutoRepeat && root.dropsAutoRepeat(event.key)) {
-                event.accepted = true
-                return
+              PeachBloom {
+                id: peachBloom
+                x: passwordInput.x
+                y: passwordInput.y - passwordArea.bloomInset
+                width: passwordInput.width
+                height: passwordInput.height + passwordArea.bloomInset * 2
+                config: design
+                input: passwordInput
+                enabled: root.inputEnabled && root.loadBackground && !root.authenticatingPassword && !root.submitting && root.failureMessage.length === 0
               }
-              if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
-                root.passwordTextEdited("")
-                event.accepted = true
+
+              TextInput {
+                id: passwordInput
+
+                Accessible.name: "Password"
+                activeFocusOnPress: true
+                activeFocusOnTab: true
+                anchors.fill: parent
+                anchors.leftMargin: root.fingerprintReserve
+                // Reserve the fingerprint icon's width on both sides so the centered
+                // dots stay symmetric and never slide under the icon as they grow.
+                anchors.rightMargin: root.fingerprintReserve
+                clip: true
+                color: design.peach
+                cursorVisible: activeFocus && root.showPasswordCursor && text.length > 0
+                echoMode: TextInput.Password
+                enabled: root.inputEnabled && !root.authenticatingPassword
+                horizontalAlignment: TextInput.AlignHCenter
+                objectName: "passwordInput"
+                passwordCharacter: "\u25CF"
+                passwordMaskDelay: 0
+                readOnly: root.authenticatingPassword
+                selectedTextColor: design.peach
+                selectionColor: Qt.alpha(design.peach, 0.25)
+                verticalAlignment: TextInput.AlignVCenter
+
+                cursorDelegate: Rectangle {
+                  color: design.peach
+                  visible: passwordInput.cursorVisible
+                  width: 2
+                }
+
+                Keys.onPressed: function (event) {
+                  root.wakeRequested()
+                  if (event.isAutoRepeat && root.dropsAutoRepeat(event.key)) {
+                    event.accepted = true
+                    return
+                  }
+                  if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
+                    root.passwordTextEdited("")
+                    event.accepted = true
+                  }
+                }
+                onAccepted: {
+                  const submitted = root.passwordText
+                  // The service clears the buffer before it reports checking/error.
+                  root.submitting = submitted.length > 0
+                  root.passwordTextEdited("")
+                  if (submitted.length > 0)
+                    root.submitPassword(submitted)
+                }
+                onTextChanged: {
+                  if (!root.syncingPasswordText)
+                    root.passwordTextEdited(text)
+                  if (text.length > 0) {
+                    root.wakeRequested()
+                  }
+                  if (text.length > 0 && root.failureMessage.length > 0)
+                    root.clearFailureRequested()
+                  if (text.length === 0) peachBloom.stop()
+                  root.updatePasswordReveal()
+                }
+
+                // A selection replacement invalidates the old dots' indices.
+                onSelectedTextChanged: {
+                  if (selectionStart !== selectionEnd) peachBloom.stop()
+                }
+
+                // textEdited excludes service synchronization and programmatic clears.
+                onTextEdited: {
+                  if (!root.syncingPasswordText)
+                    peachBloom.edit(cursorPosition, length - root.lastEditedLength)
+                  root.lastEditedLength = length
+                }
+
+                font {
+                  family: design.fontFamily
+                  letterSpacing: passwordInput.text.length > 0 ? root.passwordDotLetterSpacing * root.passwordDotScale : 0
+                  pixelSize: passwordInput.text.length > 0 ? Math.max(1, Math.floor(root.passwordDotFontSize * root.passwordDotScale)) : root.fieldFontSize
+                }
+              }
+              Text {
+                id: fingerprintIcon
+
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                color: root.fingerprintUnavailable ? design.error : design.secondary
+                objectName: "fingerprintIndicator"
+                text: root.fingerprintUnavailable ? "󰺱" : "󰈷"
+                textFormat: Text.PlainText
+                visible: root.fingerprintConfigured
+
+                font {
+                  family: design.fontFamily
+                  pixelSize: 20
+                }
               }
             }
-            onAccepted: {
-              const submitted = root.passwordText
-              root.passwordTextEdited("")
-              if (submitted.length > 0)
-                root.submitPassword(submitted)
+            Item {
+              height: 12
+              width: 1
             }
-            onTextChanged: {
-              if (!root.syncingPasswordText)
-                root.passwordTextEdited(text)
-              if (text.length > 0) {
-                root.wakeRequested()
+            Rectangle {
+              anchors.horizontalCenter: parent.horizontalCenter
+              color: root.errorHighlight ? design.error : Qt.alpha(design.peach, root.passwordText.length ? 0.65 : 0.25)
+              height: design.passwordUnderlineHeight
+              width: inputField.width
+
+              Behavior on color {
+                ColorAnimation {
+                  duration: Style.duration(root.errorHighlight ? 0 : design.errorColorReturnDuration)
+                }
               }
-              if (text.length > 0 && root.failureMessage.length > 0)
-                root.clearFailureRequested()
             }
-
-            // textEdited excludes service synchronization and programmatic clears.
-            onTextEdited: {
-              lightTrail.pulse(text.length < root.lastEditedLength)
-              root.lastEditedLength = text.length
-            }
-
-            font {
-              family: design.fontFamily
-              letterSpacing: passwordInput.text.length > 0 ? root.passwordDotLetterSpacing * root.passwordDotScale : 0
-              pixelSize: passwordInput.text.length > 0 ? Math.max(1, Math.floor(root.passwordDotFontSize * root.passwordDotScale)) : root.fieldFontSize
+            Item {
+              height: 12
+              width: 1
             }
           }
-          Text {
-            id: fingerprintIcon
-
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            color: root.fingerprintUnavailable ? design.error : design.secondary
-            objectName: "fingerprintIndicator"
-            text: root.fingerprintUnavailable ? "󰺱" : "󰈷"
-            textFormat: Text.PlainText
-            visible: root.fingerprintConfigured
-
-            font {
-              family: design.fontFamily
-              pixelSize: 20
-            }
-          }
-        }
-        Item {
-          height: 12
-          width: 1
-        }
-        Rectangle {
-          anchors.horizontalCenter: parent.horizontalCenter
-          color: root.errorHighlight ? design.error : Qt.alpha(design.peach, root.passwordText.length ? 0.65 : 0.25)
-          height: design.passwordUnderlineHeight
-          width: inputField.width
-
-          Behavior on color {
-            ColorAnimation {
-              duration: Style.duration(root.errorHighlight ? 0 : design.errorColorReturnDuration)
-            }
-          }
-
-          LightTrail {
-            id: lightTrail
-
-            anchors.fill: parent
-            config: design
-            objectName: "lightTrail"
-          }
-        }
-        Item {
-          height: 12
-          width: 1
         }
         Text {
           color: root.failureMessage.length ? design.error : Qt.alpha(design.secondary, 0.8)
           horizontalAlignment: Text.AlignHCenter
           objectName: "statusText"
-          text: root.authenticatingPassword ? "CHECKING..." : root.failureMessage.length ? "INCORRECT PASSWORD" : "ENTER PASSWORD"
+          text: root.authenticatingPassword ? "CHECKING..." : root.failureMessage.length ? "INCORRECT PASSWORD" : root.passwordRevealed ? "ENTER PASSWORD" : "START TYPING TO UNLOCK"
           textFormat: Text.PlainText
           width: parent.width
 

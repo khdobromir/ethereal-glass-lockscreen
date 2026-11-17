@@ -20,9 +20,16 @@ QtObject {
   readonly property real backgroundDimOpacity: 0.10
   readonly property int passwordFieldWidth: 240
   readonly property int passwordUnderlineHeight: 2
-  readonly property int trailDuration: 220
-  readonly property int trailLength: 60
-  readonly property real trailPeakOpacity: 0.85
+  readonly property int revealDuration: 280
+  readonly property int collapseDelay: 450
+  readonly property int bloomGlowRadius: 14
+  readonly property real bloomGlowOpacity: 0.60
+  readonly property int bloomGlowDuration: 220
+  readonly property int rippleDuration: 300
+  readonly property int rippleInitialDiameter: 10
+  readonly property int rippleFinalDiameter: 42
+  readonly property real rippleBorderWidth: 1.5
+  readonly property real rippleInitialOpacity: 0.75
   readonly property int entryDuration: 240
   readonly property int errorShakeDuration: 240
   readonly property int errorColorReturnDuration: 350
