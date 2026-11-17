@@ -1,0 +1,12 @@
+{
+  "source": "https://github.com/omacom/omarchy",
+  "omarchy": "4.0.0.r7967.g3b36b9e-1",
+  "quickshell": "Quickshell 0.3.2 (revision 2b4501a282689792b62e94f3fb30d8f512324fe6, distributed by Omarchy)",
+  "files": {
+    "FingerprintModel.js": "6684762de3e3b88445a165344a9093e8faedb0647137199f16ffd1861db6f87c",
+    "LockView.qml": "e5ec598e4dfafc0c6acb3ab8de1c3be810437ae943f6888fdcf1f92a6400876a",
+    "Service.qml": "cf9da581ab749194d44d5f7f73dc028704373f59dd6b131a90b9c07419fed7c9",
+    "manifest.json": "58af8610a79045dfc09b541a5c2fdfd2e8886624549a49114ba424b4833cc546",
+    "poster.sh": "4941c8ae143a0ed0b226a6c54e1f94cbdd5937907cc01d0d0866c0cf34d916df"
+  }
+}

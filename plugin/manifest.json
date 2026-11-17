@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "ethereal.lock",
+  "name": "Ethereal Glass Lockscreen",
+  "version": "1.0.0",
+  "author": "Local customization",
+  "description": "Ethereal frosted glass presentation over the installed Omarchy session lock.",
+  "omarchy": {
+    "capabilities": [
+      "authentication"
+    ],
+    "clonedFrom": "omarchy.lock"
+  },
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

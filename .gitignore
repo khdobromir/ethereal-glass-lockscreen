@@ -1,0 +1,5 @@
+/.local/
+/Commons
+/Ui
+__pycache__/
+*.pyc
