@@ -22,14 +22,11 @@ QtObject {
   readonly property int passwordUnderlineHeight: 2
   readonly property int revealDuration: 280
   readonly property int collapseDelay: 450
-  readonly property int bloomGlowRadius: 14
-  readonly property real bloomGlowOpacity: 0.60
-  readonly property int bloomGlowDuration: 220
-  readonly property int rippleDuration: 300
-  readonly property int rippleInitialDiameter: 10
-  readonly property int rippleFinalDiameter: 42
-  readonly property real rippleBorderWidth: 1.5
-  readonly property real rippleInitialOpacity: 0.75
+  readonly property int settleDuration: 240
+  readonly property real settleStartY: -14
+  readonly property real settleOvershootY: 4
+  readonly property real settleInitialScale: 0.85
+  readonly property real settleSquashY: 0.87
   readonly property int entryDuration: 240
   readonly property int errorShakeDuration: 240
   readonly property int errorColorReturnDuration: 350

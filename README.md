@@ -1,8 +1,8 @@
 # Ethereal Glass Lockscreen
 
 A frosted-glass lockscreen for Omarchy and Quickshell, with a peach greeting,
-clock, date, animated password reveal, peach glow on each newly entered password
-dot, and expanding ripple feedback. Uses Omarchy's native session lock and PAM
+clock, date, animated password reveal, and a short magnetic settle animation on
+each newly entered password dot. Uses Omarchy's native session lock and PAM
 authentication.
 
 ![Ethereal Glass Lockscreen](preview.png)

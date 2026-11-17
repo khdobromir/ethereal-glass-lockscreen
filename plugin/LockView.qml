@@ -119,7 +119,7 @@ Item {
     updatePasswordReveal()
     if (!inputEnabled) {
       submitting = false
-      peachBloom.stop()
+      magneticSettle.stop()
     }
     if (inputEnabled)
       Qt.callLater(forcePasswordFocus)
@@ -134,7 +134,7 @@ Item {
       collapseTimer.stop()
       passwordRevealed = false
       submitting = false
-      peachBloom.stop()
+      magneticSettle.stop()
     }
   }
   onPasswordTextChanged: {
@@ -177,7 +177,7 @@ Item {
     interval: design.collapseDelay
     onTriggered: {
       if (passwordInput.length === 0 && !root.authenticatingPassword && !root.failureMessage.length && !root.submitting) {
-        peachBloom.stop()
+        magneticSettle.stop()
         root.passwordRevealed = false
       }
     }
@@ -378,9 +378,10 @@ Item {
         }
         Item {
           id: passwordArea
-          readonly property real bloomInset: Math.max(0, (design.rippleFinalDiameter - inputField.height) / 2)
+          // Preserve the existing password reveal geometry.
+          readonly property real effectInset: 6
           width: parent.width
-          implicitHeight: passwordContent.height + bloomInset
+          implicitHeight: passwordContent.height + effectInset
           // Collapse only the painted area; the original input keeps focus.
           height: root.passwordRevealed ? implicitHeight : 0
           opacity: root.passwordRevealed ? 1 : 0
@@ -396,7 +397,7 @@ Item {
           Column {
             id: passwordContent
             width: parent.width
-            y: passwordArea.bloomInset
+            y: passwordArea.effectInset
             Item {
               id: inputField
 
@@ -404,12 +405,12 @@ Item {
               height: 30
               width: Math.min(parent.width, design.passwordFieldWidth)
 
-              PeachBloom {
-                id: peachBloom
+              MagneticSettle {
+                id: magneticSettle
                 x: passwordInput.x
-                y: passwordInput.y - passwordArea.bloomInset
+                y: passwordInput.y - passwordArea.effectInset
                 width: passwordInput.width
-                height: passwordInput.height + passwordArea.bloomInset * 2
+                height: passwordInput.height + passwordArea.effectInset * 2
                 config: design
                 input: passwordInput
                 enabled: root.inputEnabled && root.loadBackground && !root.authenticatingPassword && !root.submitting && root.failureMessage.length === 0
@@ -427,7 +428,8 @@ Item {
                 // dots stay symmetric and never slide under the icon as they grow.
                 anchors.rightMargin: root.fingerprintReserve
                 clip: true
-                color: design.peach
+                // Paint masks below the native selection and cursor; editing stays here.
+                color: "transparent"
                 cursorVisible: activeFocus && root.showPasswordCursor && text.length > 0
                 echoMode: TextInput.Password
                 enabled: root.inputEnabled && !root.authenticatingPassword
@@ -436,7 +438,7 @@ Item {
                 passwordCharacter: "\u25CF"
                 passwordMaskDelay: 0
                 readOnly: root.authenticatingPassword
-                selectedTextColor: design.peach
+                selectedTextColor: "transparent"
                 selectionColor: Qt.alpha(design.peach, 0.25)
                 verticalAlignment: TextInput.AlignVCenter
 
@@ -473,19 +475,19 @@ Item {
                   }
                   if (text.length > 0 && root.failureMessage.length > 0)
                     root.clearFailureRequested()
-                  if (text.length === 0) peachBloom.stop()
+                  if (text.length === 0) magneticSettle.stop()
                   root.updatePasswordReveal()
                 }
 
                 // A selection replacement invalidates the old dots' indices.
                 onSelectedTextChanged: {
-                  if (selectionStart !== selectionEnd) peachBloom.stop()
+                  if (selectionStart !== selectionEnd) magneticSettle.stop()
                 }
 
                 // textEdited excludes service synchronization and programmatic clears.
                 onTextEdited: {
                   if (!root.syncingPasswordText)
-                    peachBloom.edit(cursorPosition, length - root.lastEditedLength)
+                    magneticSettle.edit(cursorPosition, length - root.lastEditedLength)
                   root.lastEditedLength = length
                 }
 
