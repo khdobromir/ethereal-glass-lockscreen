@@ -16,6 +16,6 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "service": "Service.qml"
+    "service": "plugin/Service.qml"
   }
 }
