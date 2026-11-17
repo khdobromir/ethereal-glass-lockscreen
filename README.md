@@ -88,6 +88,8 @@ bash ./rollback.sh
 Плагин использует [официальный контракт shell-плагинов](https://omarchy.org/manual/shell-plugins/).
 Автор исходного механизма блокировки — Omarchy; собственные изменения представлены
 в интерфейсе и двух привязках userName в Service.qml.
+Исходное уведомление об авторских правах и [MIT-лицензия Omarchy](upstream/LICENSE)
+сохранены для включённого кода Omarchy.
 
 Копия переживает обновления Omarchy, но не получает исправления backend автоматически.
 После обновления сравнить `/usr/share/omarchy/shell/plugins/lock/` с `upstream/omarchy-lock/`,
